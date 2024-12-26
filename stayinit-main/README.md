@@ -64,8 +64,4 @@ cd stayinit
    ```
 5. Open [http://localhost:5173](http://localhost:5173)
 
-## Contact
 
-```
-kartikvaghasiya4477@gmail.com
-```
