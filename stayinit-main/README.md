@@ -53,7 +53,7 @@ We offer secure user authentication, including:
 2. Clone the repository:
 
 ```bash
-git clone https://github.com/k4rt1key/stayinit
+git clone https://github.com/Athyy7/stayinit
 cd stayinit
 ```
 
