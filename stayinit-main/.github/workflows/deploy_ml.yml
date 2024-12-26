@@ -1,0 +1,77 @@
+name: CI/CD Pipeline For Ml
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'ml/**'  
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'ml/**'    
+
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      # Step 3: Build Docker images for server and ml
+      - name: Build Docker images
+        run: |
+
+          # Build the Docker image for the ml
+          cd ml
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/stayinit-ml:latest .
+
+      # Step 4: Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 5: Push Docker images to Docker Hub
+      - name: Push Docker images
+        run: |
+
+          # Push the ml Docker image
+          docker push ${{ secrets.DOCKER_USERNAME }}/stayinit-ml:latest
+
+      # Step 6: SSH to EC2 and deploy the new images
+      - name: SSH and Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_IP }}  # Your EC2 instance IP
+          username: ubuntu  # Change if your user is different
+          key: ${{ secrets.EC2_SSH_KEY }}  # SSH private key stored in Secrets
+          script: |
+
+
+            # Stop any existing containers with the same names
+            sudo docker stop stayinit-ml || true
+            sudo docker rm stayinit-ml || true
+            sudo docker image prune -f
+
+            # Create a custom Docker network
+            sudo docker network create stayinit-network || true
+
+            # Pull the new Docker images
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/stayinit-ml:latest
+
+            # Run the ml container on the custom network
+            sudo docker run -d \
+              -p 7000:7000 \
+              --name stayinit-ml \
+              --network stayinit-network \
+              ${{ secrets.DOCKER_USERNAME }}/stayinit-ml:latest
